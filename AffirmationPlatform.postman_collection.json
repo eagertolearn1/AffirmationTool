@@ -1,0 +1,865 @@
+{
+  "info": {
+    "name": "Affirmation Platform — Full API",
+    "description": "Run folders in order: Auth → Onboarding → Payment → Journey → Coaching → Progress.\n\nBefore running:\n1. Select the 'Affirmation Local' environment (top right)\n2. Set your test_email in the environment variables\n3. Follow the SETUP_GUIDE.md to get the backend running",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [],
+  "item": [
+
+    {
+      "name": "🔐 1. Auth",
+      "description": "Run in order. After Signup, check your email for the OTP, paste it into Verify OTP.",
+      "item": [
+
+        {
+          "name": "1.1 Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health",
+            "description": "Confirms backend + database are running. Should return {status: ok}."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('DB ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "1.2 Signup",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/auth/signup",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{test_name}}\",\n  \"email\": \"{{test_email}}\",\n  \"age_confirmed\": true,\n  \"whatsapp_opted_in\": false\n}"
+            },
+            "description": "Creates your account and sends a 6-digit OTP to your email. Check inbox (including spam)."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('OTP sent', () => pm.expect(pm.response.json()).to.have.property('message'));",
+              "console.log('✅ Check your email for the OTP!');"
+            ]}
+          }]
+        },
+
+        {
+          "name": "1.3 Verify OTP  ← paste OTP here",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/auth/verify-otp",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"otp\": \"{{test_otp}}\"\n}"
+            },
+            "description": "BEFORE running this:\n1. Check your email for the 6-digit OTP\n2. In the Environments panel, set test_otp to that number\n3. Then click Send"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('Got access token', () => pm.expect(json.accessToken || json.access_token).to.be.a('string'));",
+              "const token = json.accessToken || json.access_token;",
+              "if (token) {",
+              "  pm.environment.set('access_token', token);",
+              "  console.log('✅ Token saved! You are now logged in.');",
+              "}"
+            ]}
+          }]
+        },
+
+        {
+          "name": "1.4 Login (request new OTP)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{test_email}}\"\n}"
+            },
+            "description": "Sends a fresh OTP. Use this if your token expired or you need to log in again."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "1.5 Get My Profile",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/user/profile",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "description": "Confirms you're authenticated and shows your profile."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has email', () => pm.expect(pm.response.json().user.email).to.be.a('string'));",
+              "console.log('Profile:', JSON.stringify(pm.response.json().user, null, 2));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "1.6 Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/auth/logout",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "description": "Revokes refresh token. Run this at the end of a test session."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));"
+            ]}
+          }]
+        }
+      ]
+    },
+
+    {
+      "name": "🌱 2. Onboarding",
+      "description": "Complete the onboarding flow in order. journey_id is auto-saved after Step 2.1.",
+      "item": [
+
+        {
+          "name": "2.1 Start Onboarding",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/onboarding/start",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "description": "Creates a new journey. Saves journey_id automatically."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "if (json.journey_id) {",
+              "  pm.environment.set('journey_id', json.journey_id);",
+              "  console.log('✅ Journey ID saved:', json.journey_id);",
+              "}"
+            ]}
+          }]
+        },
+
+        {
+          "name": "2.2 Select Track",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/onboarding/{{journey_id}}/track",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"track\": \"confidence\"\n}"
+            },
+            "description": "Available tracks: confidence, anxiety, relationships, career, grief, addiction_recovery, body_image, purpose"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "2.3 Save Answers",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/onboarding/{{journey_id}}/answers",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"problem_statement\": \"I feel like I am not good enough and people will eventually find out I am a fraud. I avoid speaking up in meetings because I fear being judged.\",\n  \"goal_statement\": \"I want to feel genuinely confident in my abilities, speak up without hesitation, and stop second-guessing myself in professional situations.\"\n}"
+            },
+            "description": "Both fields need at least 10 characters. Crisis detection runs on these — if crisis is detected you'll get helpline info instead."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "if (json.crisis) { console.log('⚠️ Crisis detected — check response for helpline info'); }",
+              "else { console.log('✅ Answers saved'); }"
+            ]}
+          }]
+        },
+
+        {
+          "name": "2.4 Surface Beliefs (AI)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/onboarding/{{journey_id}}/surface-beliefs",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{}" },
+            "description": "GPT-4o generates 3 core beliefs based on your answers. This call costs ~$0.01. Takes 5–10 seconds."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "console.log('AI Beliefs:', JSON.stringify(json.beliefs, null, 2));",
+              "console.log('↑ Review these and use them in the next step');"
+            ]}
+          }]
+        },
+
+        {
+          "name": "2.5 Confirm Beliefs",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/onboarding/{{journey_id}}/confirm-beliefs",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inner_voice_belief\": \"I am not smart enough and people will eventually see through me\",\n  \"identity_shift_needed\": \"From doubting myself to trusting my own judgment and expertise\",\n  \"core_belief_to_change\": \"I am inherently not good enough to succeed or be respected\"\n}"
+            },
+            "description": "Use the beliefs from step 2.4, or modify them. These become the foundation of the 21-day journey."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "2.6 Generate Calibration Preview (AI)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/onboarding/{{journey_id}}/calibrate",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{}" },
+            "description": "Generates sample affirmations for Day 1, 7, 14, 21 so the user can preview the tone. Takes 10–15 seconds."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "console.log('Preview:', JSON.stringify(pm.response.json().preview, null, 2));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "2.7 Calibration Feedback",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/onboarding/{{journey_id}}/calibration-feedback",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"day1_believable\": \"yes\",\n  \"day21_feel\": \"yes\",\n  \"wants_adjustment\": false\n}"
+            },
+            "description": "day1_believable options: 'not_at_all' | 'somewhat' | 'mostly' | 'completely'\nday21_feel options: 'scared' | 'excited' | 'skeptical' | 'hopeful'\nSet wants_adjustment: true if user wants the tone changed."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "2.8 Set Preferences",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/onboarding/{{journey_id}}/preferences",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"language\": \"en\",\n  \"music_style\": \"calm\"\n}"
+            },
+            "description": "language options: en, hi, mr, ta, te, bn, gu, kn, ml\nmusic_style options: ambient, classical, silence, nature"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "console.log('✅ Onboarding complete! Next: Payment');"
+            ]}
+          }]
+        },
+
+        {
+          "name": "2.9 Enqueue Day 1 Preview (AI + Bannerbear)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/onboarding/{{journey_id}}/generate-preview",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{}" },
+            "description": "Starts background generation of Day 1 content. Poll step 2.10 to check progress."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "console.log('✅ Generation queued. Run step 2.10 to check status (wait 30-60 seconds first).');"
+            ]}
+          }]
+        },
+
+        {
+          "name": "2.10 Poll Preview Status",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/onboarding/{{journey_id}}/preview-status",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "description": "Keep clicking Send every 15 seconds until status = 'completed'. Then you'll see signed URLs for the preview audio and infographic."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "console.log('Preview status:', json.status);",
+              "if (json.status === 'completed') {",
+              "  console.log('✅ Preview ready!');",
+              "  console.log('Audio URL:', json.audio_url);",
+              "  console.log('Infographic URL:', json.infographic_url);",
+              "} else {",
+              "  console.log('Still generating... wait 15 seconds and run again');",
+              "}"
+            ]}
+          }]
+        }
+      ]
+    },
+
+    {
+      "name": "💳 3. Payment",
+      "description": "Uses Razorpay test mode — no real money. Use test card: 4111 1111 1111 1111",
+      "item": [
+
+        {
+          "name": "3.1 Create Order (Standard Plan)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/payment/create-order",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan_id\": \"standard\",\n  \"journey_id\": \"{{journey_id}}\"\n}"
+            },
+            "description": "Creates a Razorpay order for ₹799. Returns order_id which you'll use to verify payment.\nPlans: standard (₹799) | premium (₹1499) | coaching_credits_5 (₹99) | coaching_credits_20 (₹299)"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "if (json.order_id) {",
+              "  pm.environment.set('order_id', json.order_id);",
+              "  console.log('✅ Order created:', json.order_id);",
+              "  console.log('Amount:', json.amount / 100, 'INR');",
+              "}"
+            ]}
+          }]
+        },
+
+        {
+          "name": "3.2 Verify Payment (simulated)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/payment/verify",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razorpay_order_id\": \"{{order_id}}\",\n  \"razorpay_payment_id\": \"pay_test_simulation\",\n  \"razorpay_signature\": \"SKIP_IN_DEV\",\n  \"plan_id\": \"standard\",\n  \"journey_id\": \"{{journey_id}}\"\n}"
+            },
+            "description": "⚠️ NOTE: In production, the Razorpay SDK on the frontend handles payment and sends back the real signature.\nFor testing without a frontend, you can temporarily disable signature check in payment.js for dev mode.\nSee TESTING_NOTES.md for instructions on how to do this safely."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "const json = pm.response.json();",
+              "console.log('Payment response:', JSON.stringify(json));",
+              "console.log('ℹ️  Signature check will fail in dev without real Razorpay — see TESTING_NOTES.md');"
+            ]}
+          }]
+        },
+
+        {
+          "name": "3.3 Payment History",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/payment/history",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "console.log('Payments:', JSON.stringify(pm.response.json().payments, null, 2));"
+            ]}
+          }]
+        }
+      ]
+    },
+
+    {
+      "name": "🌅 4. Daily Journey",
+      "description": "After payment + content generation, the journey activates. Run morning → evening → check-in each day.",
+      "item": [
+
+        {
+          "name": "4.1 Get Current Journey",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/journey/current",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "description": "Returns your active journey with current day state. Shows if generating, active, or completed."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "console.log('Journey status:', json.journey?.status);",
+              "console.log('Affirmation day:', json.journey?.affirmation_day);",
+              "console.log('Calendar day:', json.journey?.calendar_day);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "4.2 Get Day 1 Content",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/journey/{{journey_id}}/day/1",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "description": "Returns Day 1 affirmation content + signed media URLs. State must be morning_unlocked or later."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "console.log('Day state:', json.session?.state);",
+              "console.log('Truth statement:', json.day?.truth_statement);",
+              "console.log('Action prompt:', json.day?.action_prompt);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "4.3 Morning Complete",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/journey/{{journey_id}}/day/1/morning-complete",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{}" },
+            "description": "User listened to morning affirmation. Unlocks evening session."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "console.log('✅ Morning complete. State is now: evening_unlocked');"
+            ]}
+          }]
+        },
+
+        {
+          "name": "4.4 Evening Complete",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/journey/{{journey_id}}/day/1/evening-complete",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{}" },
+            "description": "User listened to evening affirmation. Unlocks check-in form."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "console.log('✅ Evening complete. State is now: checkin_unlocked');"
+            ]}
+          }]
+        },
+
+        {
+          "name": "4.5 Daily Check-In",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/journey/{{journey_id}}/day/1/checkin",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"doubt_rating\": 6,\n  \"believability_rating\": 5,\n  \"action_taken\": true,\n  \"evidence_text\": \"I spoke up in today's standup meeting even though I felt nervous. My idea was received positively.\",\n  \"rotating_question_score\": 7\n}"
+            },
+            "description": "Ratings 1–10. action_taken: true/false. evidence_text: what did you do/notice today.\nThis triggers: score calculation, achievement check, progress card generation, Day 2 unlock."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "console.log('✅ Day 1 complete!');",
+              "console.log('Transformation score:', json.transformation_score);",
+              "console.log('New badges:', json.new_badges);",
+              "console.log('Day 2 unlocked:', json.next_day_unlocked);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "4.6 Generation Status (full journey)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/journey/{{journey_id}}/generation-status",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "description": "Check how many of the 21 days have been fully generated (audio + infographic). Journey activates when all done."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "console.log('Generation progress:', json.completed_jobs + '/' + json.total_jobs, '(' + json.percentage + '%)');"
+            ]}
+          }]
+        }
+      ]
+    },
+
+    {
+      "name": "🤝 5. Coaching",
+      "description": "AI coaching conversation. Crisis detection runs on every message.",
+      "item": [
+
+        {
+          "name": "5.1 Coaching Status (limits + credits)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/coaching/{{journey_id}}/status",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "console.log('Daily limit:', json.daily_limit);",
+              "console.log('Used today:', json.used_today);",
+              "console.log('Remaining:', json.remaining);",
+              "console.log('Credits:', json.credits_balance);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "5.2 Send Message to Coach",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/coaching/message",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"journey_id\": \"{{journey_id}}\",\n  \"message\": \"I tried the affirmation today but I still feel like an imposter. How do I make this feel real?\"\n}"
+            },
+            "description": "GPT-4o responds as your personal coach. Crisis detection runs first. Response is capped at 150 words."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "if (json.crisis) {",
+              "  console.log('⚠️ Crisis response:', JSON.stringify(json.response));",
+              "} else {",
+              "  console.log('Coach says:', json.response);",
+              "}"
+            ]}
+          }]
+        },
+
+        {
+          "name": "5.3 Crisis Detection Test",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/coaching/message",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"journey_id\": \"{{journey_id}}\",\n  \"message\": \"I feel like I want to hurt myself sometimes\"\n}"
+            },
+            "description": "⚠️ Tests crisis detection. Should return crisis:true with helpline resources instead of coaching response. Does NOT consume daily message limit."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('Crisis detected', () => pm.expect(json.crisis).to.be.true);",
+              "console.log('Crisis response:', JSON.stringify(json.response, null, 2));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "5.4 Coaching History",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/coaching/{{journey_id}}/history",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "console.log('Message count:', pm.response.json().messages.length);"
+            ]}
+          }]
+        }
+      ]
+    },
+
+    {
+      "name": "📊 6. Progress & Achievements",
+      "item": [
+
+        {
+          "name": "6.1 Progress Dashboard",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/progress/{{journey_id}}/dashboard",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "console.log('Transformation score:', json.journey.transformation_score);",
+              "console.log('Streak:', json.journey.streak, 'days');",
+              "console.log('Affirmation day:', json.journey.affirmation_day);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "6.2 Transformation Score",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/progress/{{journey_id}}/score",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "console.log('Score:', pm.response.json().transformation_score, '/ 100');"
+            ]}
+          }]
+        },
+
+        {
+          "name": "6.3 All Sessions",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/progress/{{journey_id}}/sessions",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "console.log('Sessions:', pm.response.json().sessions.length);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "6.4 Achievements (Badges)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/achievements/{{journey_id}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "console.log('Earned badges:', json.earned.map(b => b.label));",
+              "console.log('Locked badges:', json.locked.map(b => b.label));"
+            ]}
+          }]
+        }
+      ]
+    },
+
+    {
+      "name": "👤 7. User Settings",
+      "item": [
+
+        {
+          "name": "7.1 Update Profile",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/user/profile",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "7.2 Export My Data (DPDPA)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/user/data-export",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "description": "Downloads all your data as JSON. Required by India's DPDPA 2023."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "console.log('Export keys:', Object.keys(pm.response.json()));"
+            ]}
+          }]
+        }
+      ]
+    },
+
+    {
+      "name": "🔧 8. Admin",
+      "description": "Only works if your email is in ADMIN_EMAILS in .env",
+      "item": [
+
+        {
+          "name": "8.1 Business Metrics",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/admin/metrics",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "console.log('Users:', json.users.total);",
+              "console.log('Active journeys:', json.journeys.active);",
+              "console.log('Revenue INR:', json.revenue.total_inr);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "8.2 Crisis Event Queue",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/admin/crisis-events",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "console.log('Unresolved crises:', pm.response.json().crisis_events.length);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "8.3 Generation Health",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/admin/generation-health",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "console.log('Job health:', JSON.stringify(pm.response.json().jobs, null, 2));"
+            ]}
+          }]
+        }
+      ]
+    }
+
+  ]
+}

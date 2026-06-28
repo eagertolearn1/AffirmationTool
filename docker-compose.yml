@@ -1,0 +1,96 @@
+version: '3.9'
+
+services:
+  # ── PostgreSQL ─────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: affirmation_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       identity_platform
+      POSTGRES_USER:     appuser
+      POSTGRES_PASSWORD: apppassword
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # schema is applied via: docker compose exec backend node src/db/migrate.js
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser -d identity_platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ──────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: affirmation_redis
+    restart: unless-stopped
+    command: redis-server --maxmemory-policy noeviction --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend API ────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: affirmation_backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV:     development
+      DATABASE_URL: postgresql://appuser:apppassword@postgres:5432/identity_platform
+      REDIS_URL:    redis://redis:6379
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ── n8n Automation ─────────────────────────────────────────
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: affirmation_n8n
+    restart: unless-stopped
+    environment:
+      N8N_HOST:              localhost
+      N8N_PORT:              5678
+      N8N_PROTOCOL:          http
+      WEBHOOK_URL:           http://localhost:5678/
+      GENERIC_TIMEZONE:      Asia/Kolkata
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER:   admin
+      N8N_BASIC_AUTH_PASSWORD: changeme_n8n
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n_workflows:/workflows:ro   # import workflows from here
+    ports:
+      - "5678:5678"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
+  n8n_data:
+
+networks:
+  default:
+    name: affirmation_network

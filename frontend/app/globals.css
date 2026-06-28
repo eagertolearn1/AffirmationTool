@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background:        222 20% 8%;
+    --foreground:        45 30% 92%;
+    --card:              222 18% 12%;
+    --card-foreground:   45 30% 92%;
+    --primary:           45 60% 55%;
+    --primary-foreground:222 20% 8%;
+    --secondary:         270 50% 35%;
+    --secondary-foreground: 45 30% 92%;
+    --muted:             222 15% 18%;
+    --muted-foreground:  220 10% 55%;
+    --accent:            270 60% 50%;
+    --accent-foreground: 45 30% 92%;
+    --border:            222 15% 20%;
+    --input:             222 15% 16%;
+    --ring:              45 60% 55%;
+    --radius:            0.75rem;
+  }
+}
+
+@layer base {
+  * { @apply border-border box-border; }
+  body {
+    @apply bg-background text-foreground antialiased;
+    background-color: hsl(222, 20%, 8%);
+    color: hsl(45, 30%, 92%);
+  }
+}
+
+@layer utilities {
+  .gold-text {
+    background: linear-gradient(135deg, #C9A84C, #E8C97A);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .glass-card {
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 0.75rem;
+  }
+  .gold-border {
+    border: 1px solid rgba(201,168,76,0.35);
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+}

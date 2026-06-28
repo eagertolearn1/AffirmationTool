@@ -1,0 +1,41 @@
+
+resend key = re_UQKv4pK8_7qnhwhy37S12pqVGakFPC7qo
+
+
+You don't need a domain for testing — Resend lets you send from onboarding@resend.dev in test mode.
+
+
+GPT_API =
+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
+
+Test API Key = rzp_test_T3adsIMOXr38fm
+Test Key Secret = 1514TKBsle8wi6iZMxwWyn3I
+
+
+
+cloud flare
+
+Access Key ID = fe8e9a20462d3890ef595d39f5748bf0
+
+Secret Access Key = 06dc554a5286c2803a7703dbbe755d26490317d2cb93999dc87ed6371abd6d39
+
+Default = https://cc1513b6b98ecbdfeac7b1c36816d393.r2.cloudflarestorage.com
+
+
+ACCOUNT ID = cc1513b6b98ecbdfeac7b1c36816d393
+
+
+https://app.bannerbear.com/projects/r4QLjXzWXVEvZwPd26/templates/Rqg32K5Qj8qVD8V07Y/edit#delete_layer
+
+Rqg32K5Qj8qVD8V07Y
+
+
+https://app.bannerbear.com/projects/r4QLjXzWXVEvZwPd26/templates/1eGqK9b3OLYxbnaYpP/edit
+1eGqK9b3OLYxbnaYpP
+
+https://app.bannerbear.com/projects/r4QLjXzWXVEvZwPd26/templates/vz9ByYbNrmlPbRGXrw/edit
+vz9ByYbNrmlPbRGXrw
+
+
+Project API Key = bb_pr_42bac289704c83648e722365bb6ac7
+Project Webhook Key = bb_wh_a01a8fd971219038e6aa30da437d17

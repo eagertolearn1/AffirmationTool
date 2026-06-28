@@ -1,0 +1,152 @@
+Complete Product Overview — Final Review
+
+What We Are Building
+A fully automated, AI-powered personalized affirmation platform sold to communities. Every user receives a completely custom 21-day progressive journey — built around their specific problem, goal, and life situation — delivered as daily videos, audio, and infographics with an AI coaching experience running alongside it.
+The fundamental difference from anything existing: content is not generic. Every user's affirmations, audio, and coaching are built for them specifically. No two users get the same journey.
+Reference product is auraloop.in — fixed generic content for fixed themes. We deliver what they deliver but personalized, progressive, and interactive.
+
+Who It Is For
+Individual users across multiple life tracks. Primary market is India. Sold to communities. Each user's journey is entirely private — not social, not shared with other community members.
+
+Life Tracks
+User picks one track at sign-up: Wealth, Health, Career, Confidence, Relationships, Peace, Fitness, and others. The track sets the visual theme and the framing of the affirmation journey. The content within the track is completely personalized to that individual's situation.
+
+The Complete User Journey
+
+Before Sign-Up — Landing Page
+User arrives at the product page and sees a pre-made sample video and infographic. Not personalized, but high quality — demonstrating the visual style, audio quality, and format. This is the product demo. One-time production effort, shown to all visitors.
+
+Onboarding — Free, Approximately 10 Minutes
+Step 1 — Pick a life track
+
+User selects from the available tracks.
+Step 2 — Two open questions
+
+User writes freely in their own words:
+
+"What's one thing in this area of your life that feels stuck or not moving the way you want?"
+"If this was fully resolved a year from now, what would your life feel or look like?"
+
+Step 3 — AI surfaces the hidden layer
+
+Based on both answers, the AI generates what it believes are the three things the user typically cannot articulate themselves: what their inner voice is telling them about why it is hard, what identity shift is needed, and what single belief needs to change. These are presented as suggestions — not questions. User confirms or edits each one. This gives people a skeleton to react to rather than a blank page to fill.
+Step 4 — Affirmation calibration
+
+AI generates a 4-point preview: Day 1, Day 7, Day 14, Day 21. User answers two questions: "Does Day 1 feel believable today?" and "Does Day 21 feel like an honest but inspiring stretch?" AI calibrates the intensity of the full 21-day arc based on the response. User confirms. The complete 21-day affirmation set is generated and locked. No need to review all 21 individually.
+Step 5 — Content preferences
+
+User selects:
+
+Language: Hindi, English, Marathi, Tamil, Telugu, Bengali, Gujarati, and other major Indian languages
+Background music style: from a preset library — calm, uplifting, meditative, energetic, and others
+
+Step 6 — The conversion moment (before payment)
+
+Two things are shown to the user at zero cost before any payment:
+
+Their Day 1 infographic, fully generated — their actual personalized content, their words, on a real card
+A 15–20 second audio preview from the first line of their Day 1 affirmation in their chosen language with music
+
+This is the moment the user realizes the product is genuinely built for them. Payment prompt appears here.
+
+Payment
+Standard — ₹999
+
+AI-generated voice in chosen language. Full 21-day journey. Morning and evening video for each day. Infographic for each day. Daily AI coaching. Progress dashboard. Shareable progress cards.
+Premium — ₹1,999
+
+Everything in Standard plus voice cloning. User records a 1–2 minute neutral voice sample — reading a paragraph, not any affirmation. System clones their voice and generates all content in their own voice. They never have to speak an affirmation themselves.
+Payment methods: Credit card, debit card, UPI, and all standard app payment options.
+After payment, content generation begins automatically and runs asynchronously in the background. User is notified when their full journey is ready.
+
+Content Generation — Fully Automated, Runs After Payment
+For each of the 21 days, the system generates:
+Morning video — AI-spoken affirmation in energizing tone, chosen background music, stage-matched visual background, affirmation text displayed on screen. Approximately 2–3 minutes.
+Evening video — Same affirmation in calming tone, softer music, deeper visual mood. Approximately 2–3 minutes.
+Infographic — Static visual card showing the day's Doubt → Reframe → Truth → Action. For quick daily reference.
+Total per user: 42 videos + 21 infographics.
+On the video visuals — stage-progressive library:
+
+Videos use pre-built visual backgrounds organized by life track and journey stage. The four stages map to the 21 days naturally:
+
+Days 1–5 (Identity): quiet, introspective visuals — seed, dawn, stillness
+Days 6–10 (Clarity): light, focus, direction — something coming into view
+Days 11–15 (Creation): movement, energy, building — things taking shape
+Days 16–21 (Launch & Growth): expansion, abundance, achievement
+
+Within each stage, 3 visual variations rotate across the days so consecutive days feel different. Morning and evening use different visual moods within the same stage. Affirmation text on screen changes every day regardless.
+Per life track: 4 stages × 3 variations × 2 moods = 24 video backgrounds. Across 7 tracks: 168 backgrounds total. One-time production effort serving unlimited users.
+
+The 21-Day Daily Journey
+Two counters run simultaneously for every user:
+Calendar Days — real days elapsed since the user started. Increments automatically every real day.
+Affirmation Days — which affirmation day the user is currently on, 1 through 21. Only increments when the previous day is fully completed.
+These can diverge. If a user started 12 days ago but only completed 8 affirmation days, their dashboard shows Calendar Day 12, Affirmation Day 8. At the end of their journey they see: "You completed 21 affirmation days in X calendar days." Honest mirror, no punishment, full accountability.
+The unlock chain within each day:
+
+Morning video watched → Evening video unlocked → Evening video watched + daily check-in completed → Next affirmation day unlocked.
+If morning video is not watched, evening video stays locked. Every step must be completed in sequence.
+Daily flow:
+
+Morning notification → User opens app → Watches morning video → Views infographic → Evening video is now available. Evening notification → Watches evening video → Completes daily check-in → Next day unlocks → Progress card generated.
+Daily check-in questions:
+
+How true does today's doubt feel right now? (1–10)
+How believable does the response feel? (1–10)
+How much resistance did you feel today? (1–10)
+How strongly did you act like this new identity today? (1–10)
+Did you complete your action? (Yes / Partially / No)
+Optional free text: what evidence did you create today?
+
+The system records the exact timestamp of when morning and evening videos were watched each day.
+AI conversational coach — available anytime:
+
+User can type any doubt or message at any point during the journey. The AI responds with a personalized reframe using that day's dialogue structure, adapted to their exact words. This is the proactive delivery plus reactive coaching layer — the "agentic" dimension.
+Progress card:
+
+Auto-generated when a day is fully completed. Shown in-app and shareable — user can download and send to WhatsApp, Instagram Stories, or anywhere else.
+
+Progress Dashboard
+User can see at any time:
+
+Calendar Days vs Affirmation Days — the two counters, shown together
+Doubt score trend — should move downward over days (core proof of impact)
+Believability score trend — should move upward over days
+Resistance score over time
+Identity score over time
+Action completion rate across all completed days (Yes / Partially / No breakdown)
+Consistency rate — percentage of calendar days where an affirmation day was completed
+Identity gap closing — visual showing how believability on Day 1 compares to today
+Streak — consecutive affirmation days without a gap
+Momentum index — composite weekly score across all four metrics
+Timestamps of morning and evening video watches for each completed day
+
+
+Day 21 — Completion and Renewal
+User sees their full journey summary: total calendar days taken, how doubt score changed from start to finish, action completion rate, consistency rate, and overall momentum.
+21-in-21 Achievement:
+
+If calendar days equal affirmation days equal 21 — meaning the user completed the journey with perfect daily consistency — they earn a special badge and a renewal discount. The badge is shareable as a card. This is a recognition of genuine discipline and a viral moment.
+Video feedback:
+
+After Day 21, the app prompts the user to record a 30–60 second video about what changed during their journey. On submission they receive an additional discount on their next cycle. The video stays in the product's testimonial library with their permission.
+Renewal options:
+
+Same goal, deeper conditioning — ₹699 Standard / ₹1,299 Premium
+New goal, fresh onboarding — full price ₹999 Standard / ₹1,999 Premium
+21-in-21 discount applies on top
+Video feedback discount applies on top
+
+
+What Is Fully Automated
+Onboarding conversation, affirmation generation and quality calibration, video generation, audio generation, infographic generation, daily delivery and notifications, unlock sequencing, progress tracking, AI coaching responses, progress card generation, renewal prompts.
+What Requires User Input By Design
+Confirming or editing the AI's reading of their problem during onboarding, confirming the affirmation calibration before payment, daily check-in responses, voice sample recording for Premium users, renewal decision.
+
+Phase 1 vs Phase 2
+Phase 1 — Launch:
+
+All features above with AI-generated voice in chosen language. Standard and Premium tiers with voice cloning available from day one for Premium.
+Phase 2 — Future:
+
+Exploring fully AI-generated unique visuals per user (replacing the pre-built library with custom video generation per affirmation), additional language support, deeper analytics, and community features if demand emerges.

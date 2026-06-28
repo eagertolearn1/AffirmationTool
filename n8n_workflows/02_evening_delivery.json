@@ -1,0 +1,103 @@
+{
+  "name": "02 Evening Delivery",
+  "nodes": [
+    {
+      "id": "schedule-evening",
+      "name": "Schedule: Every 30 min 7-9 PM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [100, 300],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "*/30 19-21 * * *" }]
+        }
+      }
+    },
+    {
+      "id": "get-users-evening",
+      "name": "Get Users with Evening Unlocked",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [300, 300],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT u.id, u.name, u.whatsapp_number, u.push_token, u.whatsapp_opted_in, j.id AS journey_id, j.current_affirmation_day FROM users u JOIN journeys j ON j.user_id = u.id JOIN daily_sessions ds ON ds.journey_id = j.id AND ds.affirmation_day_number = j.current_affirmation_day WHERE j.status = 'active' AND ds.state = 'evening_unlocked' AND ds.morning_completed_at IS NOT NULL AND NOT EXISTS (SELECT 1 FROM notification_log nl WHERE nl.user_id = u.id AND nl.channel = 'whatsapp' AND nl.template_name = 'evening_reminder' AND nl.sent_at > NOW() - INTERVAL '8 hours')"
+      }
+    },
+    {
+      "id": "split-evening",
+      "name": "Split into Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [500, 300],
+      "parameters": { "batchSize": 1, "options": {} }
+    },
+    {
+      "id": "check-opted-in-evening",
+      "name": "WhatsApp Opted In?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [700, 300],
+      "parameters": {
+        "conditions": {
+          "conditions": [{ "id": "opt-in-check", "leftValue": "={{ $json.whatsapp_opted_in }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "send-whatsapp-evening",
+      "name": "Send WhatsApp Evening Reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.WHATSAPP_API_URL }}/api/v1/sendTemplateMessage",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "mode": "raw",
+          "rawBody": "={{ JSON.stringify({ phone_number: $json.whatsapp_number, template_name: 'evening_reminder', broadcast_name: 'evening_reminder', parameters: [{ name: 'user_name', value: $json.name }, { name: 'deep_link', value: 'https://yourapp.com/journey/day/' + $json.current_affirmation_day }] }) }}"
+        }
+      }
+    },
+    {
+      "id": "log-evening-sent",
+      "name": "Log Evening Notification",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1100, 200],
+      "parameters": {
+        "operation": "insert",
+        "table": { "schema": "public", "table": "notification_log" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $('get-users-evening').item.json.id }}",
+            "journey_id": "={{ $('get-users-evening').item.json.journey_id }}",
+            "channel": "whatsapp",
+            "template_name": "evening_reminder",
+            "status": "sent"
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule: Every 30 min 7-9 PM": { "main": [[{ "node": "Get Users with Evening Unlocked", "type": "main", "index": 0 }]] },
+    "Get Users with Evening Unlocked": { "main": [[{ "node": "Split into Items", "type": "main", "index": 0 }]] },
+    "Split into Items": { "main": [[{ "node": "WhatsApp Opted In?", "type": "main", "index": 0 }]] },
+    "WhatsApp Opted In?": {
+      "main": [
+        [{ "node": "Send WhatsApp Evening Reminder", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Send WhatsApp Evening Reminder": { "main": [[{ "node": "Log Evening Notification", "type": "main", "index": 0 }]] }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" }
+}

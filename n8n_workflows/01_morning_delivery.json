@@ -1,0 +1,149 @@
+{
+  "name": "01 Morning Delivery",
+  "nodes": [
+    {
+      "id": "schedule-morning",
+      "name": "Schedule: Every 30 min 6-9 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [100, 300],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "*/30 6-9 * * *" }]
+        }
+      }
+    },
+    {
+      "id": "get-users-for-reminder",
+      "name": "Get Users Due for Morning Reminder",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [300, 300],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT u.id, u.name, u.whatsapp_number, u.push_token, u.whatsapp_opted_in, j.id AS journey_id, j.current_affirmation_day, j.language FROM users u JOIN journeys j ON j.user_id = u.id WHERE j.status = 'active' AND j.current_affirmation_day < 21 AND (u.preferred_morning_time IS NULL OR DATE_TRUNC('hour', NOW()) = DATE_TRUNC('hour', NOW()::DATE + u.preferred_morning_time::interval)) AND NOT EXISTS (SELECT 1 FROM notification_log nl WHERE nl.user_id = u.id AND nl.channel = 'whatsapp' AND nl.template_name = 'morning_reminder' AND nl.sent_at > NOW() - INTERVAL '12 hours')"
+      }
+    },
+    {
+      "id": "split-users",
+      "name": "Split into Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [500, 300],
+      "parameters": { "batchSize": 1, "options": {} }
+    },
+    {
+      "id": "check-whatsapp-opted-in",
+      "name": "WhatsApp Opted In?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [700, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "id": "check-opt-in", "leftValue": "={{ $json.whatsapp_opted_in }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "get-day-deep-link",
+      "name": "Build Deep Link",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [900, 200],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "link", "name": "deep_link", "value": "={{ 'https://yourapp.com/journey/day/' + $json.current_affirmation_day }}", "type": "string" },
+            { "id": "name", "name": "user_name", "value": "={{ $json.name }}", "type": "string" },
+            { "id": "day", "name": "day_number", "value": "={{ $json.current_affirmation_day }}", "type": "string" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "send-whatsapp-morning",
+      "name": "Send WhatsApp Morning Reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.WHATSAPP_API_URL }}/api/v1/sendTemplateMessage",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Content-Type", "value": "application/json" }]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "mode": "raw",
+          "rawBody": "={{ JSON.stringify({ phone_number: $json.whatsapp_number, template_name: 'morning_reminder', broadcast_name: 'morning_reminder', parameters: [{ name: 'user_name', value: $json.user_name }, { name: 'day_number', value: $json.day_number }, { name: 'deep_link', value: $json.deep_link }] }) }}"
+        }
+      }
+    },
+    {
+      "id": "log-whatsapp-sent",
+      "name": "Log Notification",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1300, 200],
+      "parameters": {
+        "operation": "insert",
+        "table": { "schema": "public", "table": "notification_log" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $('get-users-for-reminder').item.json.id }}",
+            "journey_id": "={{ $('get-users-for-reminder').item.json.journey_id }}",
+            "channel": "whatsapp",
+            "template_name": "morning_reminder",
+            "status": "sent"
+          }
+        }
+      }
+    },
+    {
+      "id": "send-push-notification",
+      "name": "Send FCM Push (if push token exists)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 420],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/internal/push",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-webhook-secret", "value": "={{ $env.WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "mode": "raw",
+          "rawBody": "={{ JSON.stringify({ user_id: $json.id, push_token: $json.push_token, title: 'Good morning ' + $json.name + '!', body: 'Day ' + $json.current_affirmation_day + ' is ready.', deep_link: '/journey/day/' + $json.current_affirmation_day }) }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule: Every 30 min 6-9 AM": { "main": [[{ "node": "Get Users Due for Morning Reminder", "type": "main", "index": 0 }]] },
+    "Get Users Due for Morning Reminder": { "main": [[{ "node": "Split into Items", "type": "main", "index": 0 }]] },
+    "Split into Items": { "main": [[{ "node": "WhatsApp Opted In?", "type": "main", "index": 0 }]] },
+    "WhatsApp Opted In?": {
+      "main": [
+        [{ "node": "Build Deep Link", "type": "main", "index": 0 }],
+        [{ "node": "Send FCM Push (if push token exists)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Deep Link": { "main": [[{ "node": "Send WhatsApp Morning Reminder", "type": "main", "index": 0 }]] },
+    "Send WhatsApp Morning Reminder": { "main": [[{ "node": "Log Notification", "type": "main", "index": 0 }]] }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" }
+}

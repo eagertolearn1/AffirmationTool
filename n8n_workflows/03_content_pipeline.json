@@ -1,0 +1,98 @@
+{
+  "name": "03 Content Generation Pipeline",
+  "nodes": [
+    {
+      "id": "webhook-payment-confirmed",
+      "name": "Webhook: Payment Confirmed",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [100, 300],
+      "parameters": {
+        "path": "payment-confirmed",
+        "httpMethod": "POST",
+        "authentication": "headerAuth",
+        "options": {}
+      }
+    },
+    {
+      "id": "validate-secret",
+      "name": "Validate Webhook Secret",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [300, 300],
+      "parameters": {
+        "conditions": {
+          "conditions": [{ "id": "secret-check", "leftValue": "={{ $json.headers['x-webhook-secret'] }}", "rightValue": "={{ $env.WEBHOOK_SECRET }}", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "trigger-content-generation",
+      "name": "Trigger BullMQ: Full Content Generation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/internal/enqueue-content-generation",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-webhook-secret", "value": "={{ $env.WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "mode": "raw",
+          "rawBody": "={{ JSON.stringify({ journey_id: $json.body.journey_id, priority: 'normal' }) }}"
+        }
+      }
+    },
+    {
+      "id": "notify-generating",
+      "name": "Send WhatsApp: Generation Started",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.WHATSAPP_API_URL }}/api/v1/sendTemplateMessage",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "mode": "raw",
+          "rawBody": "={{ JSON.stringify({ phone_number: $('Webhook: Payment Confirmed').item.json.body.whatsapp_number, template_name: 'journey_generating', broadcast_name: 'journey_generating', parameters: [{ name: 'user_name', value: $('Webhook: Payment Confirmed').item.json.body.user_name }] }) }}"
+        }
+      }
+    },
+    {
+      "id": "reject-invalid",
+      "name": "Reject: Invalid Secret",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [500, 420],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ error: 'UNAUTHORIZED' }) }}",
+        "options": { "responseCode": 401 }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook: Payment Confirmed": { "main": [[{ "node": "Validate Webhook Secret", "type": "main", "index": 0 }]] },
+    "Validate Webhook Secret": {
+      "main": [
+        [{ "node": "Trigger BullMQ: Full Content Generation", "type": "main", "index": 0 }],
+        [{ "node": "Reject: Invalid Secret", "type": "main", "index": 0 }]
+      ]
+    },
+    "Trigger BullMQ: Full Content Generation": { "main": [[{ "node": "Send WhatsApp: Generation Started", "type": "main", "index": 0 }]] }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" }
+}

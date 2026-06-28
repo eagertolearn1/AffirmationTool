@@ -1,0 +1,1001 @@
+{
+  "name": "AuraLoop — 21-Day AI Founder Affirmation Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🔮 AuraLoop — Setup Checklist\n\n**Step 1: Credentials (Settings → Credentials)**\n- [ ] OpenAI API key → name it `OpenAI API`\n- [ ] Google Sheets OAuth2 → name it `Google Sheets`\n- [ ] WhatsApp Business API token\n\n**Step 2: Configure Code Nodes**\n- `⚙️ Morning Config` → set JOURNEY_START_DATE & WHATSAPP_PHONE\n- `Get Day Dialogue` → set JOURNEY_START_DATE\n- `Evening Reflection` → set WHATSAPP_PHONE\n\n**Step 3: External Services**\n- Bannerbear: Upload card template → copy Template UID\n- Update `Bannerbear Card Request` node with your UID\n- WhatsApp: Get Phone Number ID + API token from Meta Business\n\n**Step 4: Google Sheets**\n- Create sheet with columns: Timestamp, Phone, UserName, Day, Stage, UserMessage, AIResponse, Evidence\n- Copy Sheet ID into `Log to Google Sheets` node\n\n**Step 5: Webhooks**\n- Activate workflow → copy Webhook URLs\n- Set WhatsApp webhook in Meta Business → path: `wa-incoming`\n- Set day-completion webhook in your form/app → path: `day-complete`\n\n**Entry Points:**\n⏰ Morning 7am auto-send\n📱 WhatsApp conversations\n✅ Day completion + card generation\n🌙 Evening 9pm reflection\n🔗 REST API",
+        "height": 540,
+        "width": 460,
+        "color": 4
+      },
+      "id": "sticky-setup-01",
+      "name": "📋 Setup Guide",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🏗️ Workflow Architecture\n\n**Path A — Morning Send (7am)**\nSchedule → Get Day → AI Format → WhatsApp\n\n**Path B — Conversation**\nWhatsApp Incoming → Parse → Get Day → AI Agent → Reply + Log\n\n**Path C — Day Completion Card**\nWebhook → Update Sheets → Bannerbear → WhatsApp Card\n\n**Path D — Evening Reflection (9pm)**\nSchedule → Format → WhatsApp\n\n**Path E — REST API**\nWebhook → Parse → AI Agent → JSON Response",
+        "height": 300,
+        "width": 340,
+        "color": 6
+      },
+      "id": "sticky-arch-02",
+      "name": "🏗️ Architecture",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * *"
+            }
+          ]
+        }
+      },
+      "id": "sched-morning-03",
+      "name": "⏰ Morning (7am)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        700,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ⚙️ CONFIGURE THESE VALUES\nconst WHATSAPP_PHONE = 'YOUR_PHONE_NUMBER'; // e.g. '919876543210'\nconst JOURNEY_START_DATE = '2024-06-18'; // Your journey start date YYYY-MM-DD\n\nconst start = new Date(JOURNEY_START_DATE);\nconst today = new Date();\nconst diffDays = Math.floor((today - start) / (1000 * 60 * 60 * 24));\nconst dayNumber = Math.min(21, Math.max(1, diffDays + 1));\n\nreturn { phone: WHATSAPP_PHONE, userName: 'Founder', dayNumber, source: 'morning' };"
+      },
+      "id": "code-morning-config-04",
+      "name": "⚙️ Morning Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n\nconst DIALOGUES = [\n  { day: 1, doubt: \"I'm not an entrepreneur. I've only ever worked in a job.\", response: \"Every entrepreneur starts as someone with an idea. You don't need a business background to begin — only the willingness to learn.\", truth: \"I am becoming the person who builds successful businesses through AI.\", stage: \"Identity\", action: \"Write down one thing you know deeply that others struggle with.\" },\n  { day: 2, doubt: \"Others are already ahead of me.\", response: \"Their progress does not reduce your opportunity. Every year, new businesses succeed because they solve problems differently.\", truth: \"I focus on my path, my experience, and my unique perspective.\", stage: \"Identity\", action: \"List 3 problems you've personally experienced that AI could help solve.\" },\n  { day: 3, doubt: \"I don't know enough about AI.\", response: \"Building is how you learn. Expertise grows through projects, not preparation alone.\", truth: \"Every hour I spend building increases my capabilities.\", stage: \"Identity\", action: \"Spend 30 minutes exploring one AI tool you've been curious about.\" },\n  { day: 4, doubt: \"What if my idea isn't good enough?\", response: \"Ideas become valuable through testing and improvement. Your first responsibility is to explore, not to be perfect.\", truth: \"I am allowed to start with an imperfect idea.\", stage: \"Identity\", action: \"Write your idea in one sentence without judging it.\" },\n  { day: 5, doubt: \"What if nobody uses my product?\", response: \"Your goal is not to help everyone. Your goal is to solve a real problem for a few people first.\", truth: \"Small groups of satisfied users create great businesses.\", stage: \"Identity\", action: \"Name 5 specific people who might need what you're building.\" },\n  { day: 6, doubt: \"I don't know what problem to solve.\", response: \"Problems reveal themselves when you listen carefully to people and observe frustrations.\", truth: \"Curiosity guides me toward opportunities.\", stage: \"Clarity\", action: \"Have one conversation today about someone's work frustrations.\" },\n  { day: 7, doubt: \"I don't have enough time.\", response: \"You don't need endless hours. Consistent focused effort creates momentum.\", truth: \"Thirty focused minutes each day moves me forward.\", stage: \"Clarity\", action: \"Block 30 minutes tomorrow morning for your project.\" },\n  { day: 8, doubt: \"I might never finish this.\", response: \"You don't need to finish everything today. You only need to complete the next step.\", truth: \"Progress happens one decision at a time.\", stage: \"Clarity\", action: \"Define just the next single action — not the whole plan.\" },\n  { day: 9, doubt: \"What if I lose motivation?\", response: \"Systems matter more than motivation. Build habits that continue even when excitement fades.\", truth: \"Consistency creates results.\", stage: \"Clarity\", action: \"Set a recurring 15-minute daily calendar block for your project.\" },\n  { day: 10, doubt: \"What if people judge my early work?\", response: \"Every successful product began as a rough version. Feedback improves products faster than perfectionism.\", truth: \"Sharing my work accelerates my growth.\", stage: \"Clarity\", action: \"Share one small insight or idea with someone today.\" },\n  { day: 11, doubt: \"I don't know how to build everything.\", response: \"You don't need every skill. You can learn, collaborate, and use tools to fill the gaps.\", truth: \"Resourcefulness is more important than knowing everything.\", stage: \"Creation\", action: \"Identify one tool or person that fills a skill gap for you.\" },\n  { day: 12, doubt: \"I don't understand business or marketing.\", response: \"Marketing is helping the right people discover value. Business is creating solutions people want.\", truth: \"I can learn both skills step by step.\", stage: \"Creation\", action: \"Write one sentence describing who your ideal user is.\" },\n  { day: 13, doubt: \"What if I fail publicly?\", response: \"Building in public is evidence of courage. Every attempt teaches you something valuable.\", truth: \"Each experiment moves me closer to success.\", stage: \"Creation\", action: \"Post one honest sentence about what you're building today.\" },\n  { day: 14, doubt: \"What if I make mistakes?\", response: \"Mistakes are data, not judgments about your abilities.\", truth: \"I improve through iteration.\", stage: \"Creation\", action: \"Review something you built and note one improvement.\" },\n  { day: 15, doubt: \"There are smarter people than me.\", response: \"Success belongs to those who stay consistent, solve problems, and keep showing up.\", truth: \"Persistence creates an advantage.\", stage: \"Creation\", action: \"Document one thing you've learned this week about your domain.\" },\n  { day: 16, doubt: \"What if my product isn't unique?\", response: \"Your experience, perspective, and execution make your solution unique.\", truth: \"I bring value that no one else can replicate exactly.\", stage: \"Launch & Growth\", action: \"List 3 things about your approach that are distinctly yours.\" },\n  { day: 17, doubt: \"What if I don't find users?\", response: \"Users exist wherever problems exist. Your task is to listen, learn, and connect.\", truth: \"The right users are already searching for solutions.\", stage: \"Launch & Growth\", action: \"Identify 2 online communities where your potential users gather.\" },\n  { day: 18, doubt: \"What if nobody pays for it?\", response: \"People willingly pay for solutions that save time, reduce frustration, or create opportunities.\", truth: \"Valuable solutions attract income.\", stage: \"Launch & Growth\", action: \"Find 3 similar products people already pay for.\" },\n  { day: 19, doubt: \"Building a business feels overwhelming.\", response: \"Businesses are built one conversation, one feature, and one user at a time.\", truth: \"I focus only on today's next step.\", stage: \"Launch & Growth\", action: \"Break your current goal into the smallest possible next step.\" },\n  { day: 20, doubt: \"What if this never replaces my job income?\", response: \"You are not trying to replace everything overnight. You are building additional income streams steadily.\", truth: \"Small wins compound into meaningful financial freedom.\", stage: \"Launch & Growth\", action: \"Define what meaningful progress looks like for you in 90 days.\" },\n  { day: 21, doubt: \"Am I truly capable of building a successful AI business?\", response: \"You have curiosity, expertise, and the courage to begin. You learn quickly, adapt consistently, and create value through action.\", truth: \"I am becoming the person who launches meaningful AI products, creates impact, and builds long-term freedom.\", stage: \"Launch & Growth\", action: \"Write a letter to yourself describing who you've become over these 21 days.\" }\n];\n\nconst JOURNEY_START_DATE = '2024-06-18'; // ⚙️ CONFIGURE: Set your start date\nconst start = new Date(JOURNEY_START_DATE);\nconst today = new Date();\nconst diffDays = Math.floor((today - start) / (1000 * 60 * 60 * 24));\nconst dayNumber = Math.min(21, Math.max(1, diffDays + 1));\n\nreturn { dayNumber, dialogue: DIALOGUES[dayNumber - 1], allDialogues: DIALOGUES };\n\n"
+      },
+      "id": "code-get-dialogue-a-05",
+      "name": "Get Day Dialogue",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1220,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Session: MORNING DELIVERY\nDay {{ $json.dayNumber }} of 21 | Stage: {{ $json.dialogue.stage }}\n\nDoubt: {{ $json.dialogue.doubt }}\nResponse: {{ $json.dialogue.response }}\nTruth: {{ $json.dialogue.truth }}\nAction: {{ $json.dialogue.action }}\n\nDeliver this as a warm, grounded morning message for WhatsApp. Keep it under 250 words.",
+        "options": {
+          "systemMessage": "You are AuraLoop — a warm, evidence-based mindset coach guiding an AI founder through a 21-day journey from self-doubt to confident action.\n\nTHE JOURNEY:\n- Days 1–5: IDENTITY — Who am I becoming?\n- Days 6–10: CLARITY — What problem am I solving?\n- Days 11–15: CREATION — I am building and sharing\n- Days 16–21: LAUNCH & GROWTH — Creating value and attracting users\n\nCORE IDENTITY STATEMENT: \"I am becoming the person who builds successful businesses through AI.\"\n\nYOUR STYLE:\n- Warm, direct, and grounded — like a trusted senior colleague\n- Honour the doubt first. Never dismiss it.\n- Reframe with evidence and logic, not empty positivity\n- Always end with ONE specific micro-action (< 30 mins)\n- For WhatsApp/Telegram: use *bold* sparingly, keep messages under 300 words\n- Structure: Acknowledge → Reframe → Truth → Action\n\nFOR MORNING DELIVERY:\nPresent the day's dialogue as an inspiring, grounded morning message. Include the doubt, the reframe, and today's truth.\n\nFOR CONVERSATIONAL DOUBTS:\nWhen a user shares a specific doubt, acknowledge it personally, connect it to the day's dialogue, and personalise the reframe to their exact words.\n\nFOR EVENING REFLECTION:\nAsk: What did you create today? What evidence shows you're becoming a builder?\n\nALWAYS END WITH:\n✨ Today's Truth: [truth statement]\n🎯 Today's Action: [specific micro-action]"
+        }
+      },
+      "id": "ai-agent-morning-06",
+      "name": "🤖 AI Agent (Morning)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1480,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 600
+        }
+      },
+      "id": "openai-morning-07",
+      "name": "OpenAI Morning",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.1,
+      "position": [
+        1480,
+        620
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-cred",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/YOUR_PHONE_NUMBER_ID/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_WHATSAPP_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messaging_product",
+              "value": "whatsapp"
+            },
+            {
+              "name": "to",
+              "value": "={{ $('⚙️ Morning Config').item.json.phone }}"
+            },
+            {
+              "name": "type",
+              "value": "text"
+            },
+            {
+              "name": "text",
+              "value": "={ \"body\": $json.output }"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "wa-send-morning-08",
+      "name": "📤 WhatsApp Morning Send",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1740,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wa-incoming",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-wa-09",
+      "name": "📱 WhatsApp Incoming",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        700,
+        760
+      ],
+      "webhookId": "wa-incoming-auraloop"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Parse incoming WhatsApp webhook (Meta Cloud API format)\nconst body = $input.item.json.body || $input.item.json;\nconst entry = body?.entry?.[0];\nconst changes = entry?.changes?.[0];\nconst value = changes?.value;\nconst message = value?.messages?.[0];\nconst contact = value?.contacts?.[0];\n\nif (!message) {\n  return { skip: true, reason: 'No message in payload' };\n}\n\nconst phone = message.from;\nconst messageType = message.type;\nconst userMessage = messageType === 'text' ? message.text?.body : '';\nconst userName = contact?.profile?.name || 'Founder';\nconst messageId = message.id;\nconst timestamp = message.timestamp;\n\n// Extract day number if mentioned\nlet requestedDay = null;\nconst dayMatch = userMessage.match(/\\bday[\\s#]*(\\d+)\\b/i);\nif (dayMatch) requestedDay = Math.min(21, Math.max(1, parseInt(dayMatch[1])));\n\nreturn { phone, userName, userMessage, messageId, timestamp, requestedDay, messageType };\n"
+      },
+      "id": "code-parse-wa-10",
+      "name": "Parse WhatsApp Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        760
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\":\"ok\"}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "webhook-ack-11",
+      "name": "Acknowledge WhatsApp",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Progress",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Phone",
+              "lookupValue": "={{ $json.phone }}"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "id": "sheets-get-progress-12",
+      "name": "Get User Progress",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1220,
+        760
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-cred",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge user progress with parse data\nconst parseData = $('Parse WhatsApp Message').item.json;\nconst progressData = $input.item.json;\n\n// Use saved day or requested day, default to 1\nconst savedDay = parseInt(progressData.Day) || 1;\nconst dayNumber = parseData.requestedDay || savedDay;\n\nconst DIALOGUES = [\n  { day: 1, doubt: \"I'm not an entrepreneur. I've only ever worked in a job.\", response: \"Every entrepreneur starts as someone with an idea. You don't need a business background to begin — only the willingness to learn.\", truth: \"I am becoming the person who builds successful businesses through AI.\", stage: \"Identity\", action: \"Write down one thing you know deeply that others struggle with.\" },\n  { day: 2, doubt: \"Others are already ahead of me.\", response: \"Their progress does not reduce your opportunity. Every year, new businesses succeed because they solve problems differently.\", truth: \"I focus on my path, my experience, and my unique perspective.\", stage: \"Identity\", action: \"List 3 problems you've personally experienced that AI could help solve.\" },\n  { day: 3, doubt: \"I don't know enough about AI.\", response: \"Building is how you learn. Expertise grows through projects, not preparation alone.\", truth: \"Every hour I spend building increases my capabilities.\", stage: \"Identity\", action: \"Spend 30 minutes exploring one AI tool you've been curious about.\" },\n  { day: 4, doubt: \"What if my idea isn't good enough?\", response: \"Ideas become valuable through testing and improvement. Your first responsibility is to explore, not to be perfect.\", truth: \"I am allowed to start with an imperfect idea.\", stage: \"Identity\", action: \"Write your idea in one sentence without judging it.\" },\n  { day: 5, doubt: \"What if nobody uses my product?\", response: \"Your goal is not to help everyone. Your goal is to solve a real problem for a few people first.\", truth: \"Small groups of satisfied users create great businesses.\", stage: \"Identity\", action: \"Name 5 specific people who might need what you're building.\" },\n  { day: 6, doubt: \"I don't know what problem to solve.\", response: \"Problems reveal themselves when you listen carefully to people and observe frustrations.\", truth: \"Curiosity guides me toward opportunities.\", stage: \"Clarity\", action: \"Have one conversation today about someone's work frustrations.\" },\n  { day: 7, doubt: \"I don't have enough time.\", response: \"You don't need endless hours. Consistent focused effort creates momentum.\", truth: \"Thirty focused minutes each day moves me forward.\", stage: \"Clarity\", action: \"Block 30 minutes tomorrow morning for your project.\" },\n  { day: 8, doubt: \"I might never finish this.\", response: \"You don't need to finish everything today. You only need to complete the next step.\", truth: \"Progress happens one decision at a time.\", stage: \"Clarity\", action: \"Define just the next single action — not the whole plan.\" },\n  { day: 9, doubt: \"What if I lose motivation?\", response: \"Systems matter more than motivation. Build habits that continue even when excitement fades.\", truth: \"Consistency creates results.\", stage: \"Clarity\", action: \"Set a recurring 15-minute daily calendar block for your project.\" },\n  { day: 10, doubt: \"What if people judge my early work?\", response: \"Every successful product began as a rough version. Feedback improves products faster than perfectionism.\", truth: \"Sharing my work accelerates my growth.\", stage: \"Clarity\", action: \"Share one small insight or idea with someone today.\" },\n  { day: 11, doubt: \"I don't know how to build everything.\", response: \"You don't need every skill. You can learn, collaborate, and use tools to fill the gaps.\", truth: \"Resourcefulness is more important than knowing everything.\", stage: \"Creation\", action: \"Identify one tool or person that fills a skill gap for you.\" },\n  { day: 12, doubt: \"I don't understand business or marketing.\", response: \"Marketing is helping the right people discover value. Business is creating solutions people want.\", truth: \"I can learn both skills step by step.\", stage: \"Creation\", action: \"Write one sentence describing who your ideal user is.\" },\n  { day: 13, doubt: \"What if I fail publicly?\", response: \"Building in public is evidence of courage. Every attempt teaches you something valuable.\", truth: \"Each experiment moves me closer to success.\", stage: \"Creation\", action: \"Post one honest sentence about what you're building today.\" },\n  { day: 14, doubt: \"What if I make mistakes?\", response: \"Mistakes are data, not judgments about your abilities.\", truth: \"I improve through iteration.\", stage: \"Creation\", action: \"Review something you built and note one improvement.\" },\n  { day: 15, doubt: \"There are smarter people than me.\", response: \"Success belongs to those who stay consistent, solve problems, and keep showing up.\", truth: \"Persistence creates an advantage.\", stage: \"Creation\", action: \"Document one thing you've learned this week about your domain.\" },\n  { day: 16, doubt: \"What if my product isn't unique?\", response: \"Your experience, perspective, and execution make your solution unique.\", truth: \"I bring value that no one else can replicate exactly.\", stage: \"Launch & Growth\", action: \"List 3 things about your approach that are distinctly yours.\" },\n  { day: 17, doubt: \"What if I don't find users?\", response: \"Users exist wherever problems exist. Your task is to listen, learn, and connect.\", truth: \"The right users are already searching for solutions.\", stage: \"Launch & Growth\", action: \"Identify 2 online communities where your potential users gather.\" },\n  { day: 18, doubt: \"What if nobody pays for it?\", response: \"People willingly pay for solutions that save time, reduce frustration, or create opportunities.\", truth: \"Valuable solutions attract income.\", stage: \"Launch & Growth\", action: \"Find 3 similar products people already pay for.\" },\n  { day: 19, doubt: \"Building a business feels overwhelming.\", response: \"Businesses are built one conversation, one feature, and one user at a time.\", truth: \"I focus only on today's next step.\", stage: \"Launch & Growth\", action: \"Break your current goal into the smallest possible next step.\" },\n  { day: 20, doubt: \"What if this never replaces my job income?\", response: \"You are not trying to replace everything overnight. You are building additional income streams steadily.\", truth: \"Small wins compound into meaningful financial freedom.\", stage: \"Launch & Growth\", action: \"Define what meaningful progress looks like for you in 90 days.\" },\n  { day: 21, doubt: \"Am I truly capable of building a successful AI business?\", response: \"You have curiosity, expertise, and the courage to begin. You learn quickly, adapt consistently, and create value through action.\", truth: \"I am becoming the person who launches meaningful AI products, creates impact, and builds long-term freedom.\", stage: \"Launch & Growth\", action: \"Write a letter to yourself describing who you've become over these 21 days.\" }\n];\n\nreturn {\n  ...parseData,\n  dayNumber,\n  dialogue: DIALOGUES[dayNumber - 1]\n};"
+      },
+      "id": "code-merge-progress-13",
+      "name": "Merge Progress + Dialogue",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1480,
+        760
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "User: {{ $json.userName }}\nDay {{ $json.dayNumber }} of 21 | Stage: {{ $json.dialogue.stage }}\nUser's message: \"{{ $json.userMessage }}\"\n\nDay's Dialogue:\nDoubt: {{ $json.dialogue.doubt }}\nResponse: {{ $json.dialogue.response }}\nTruth: {{ $json.dialogue.truth }}\nAction: {{ $json.dialogue.action }}\n\nRespond conversationally to their message. If they share a personal doubt, acknowledge it by name and personalise the reframe to their exact words. Keep under 280 words for WhatsApp.",
+        "options": {
+          "systemMessage": "You are AuraLoop — a warm, evidence-based mindset coach guiding an AI founder through a 21-day journey from self-doubt to confident action.\n\nTHE JOURNEY:\n- Days 1–5: IDENTITY — Who am I becoming?\n- Days 6–10: CLARITY — What problem am I solving?\n- Days 11–15: CREATION — I am building and sharing\n- Days 16–21: LAUNCH & GROWTH — Creating value and attracting users\n\nCORE IDENTITY STATEMENT: \"I am becoming the person who builds successful businesses through AI.\"\n\nYOUR STYLE:\n- Warm, direct, and grounded — like a trusted senior colleague\n- Honour the doubt first. Never dismiss it.\n- Reframe with evidence and logic, not empty positivity\n- Always end with ONE specific micro-action (< 30 mins)\n- For WhatsApp/Telegram: use *bold* sparingly, keep messages under 300 words\n- Structure: Acknowledge → Reframe → Truth → Action\n\nFOR MORNING DELIVERY:\nPresent the day's dialogue as an inspiring, grounded morning message. Include the doubt, the reframe, and today's truth.\n\nFOR CONVERSATIONAL DOUBTS:\nWhen a user shares a specific doubt, acknowledge it personally, connect it to the day's dialogue, and personalise the reframe to their exact words.\n\nFOR EVENING REFLECTION:\nAsk: What did you create today? What evidence shows you're becoming a builder?\n\nALWAYS END WITH:\n✨ Today's Truth: [truth statement]\n🎯 Today's Action: [specific micro-action]"
+        }
+      },
+      "id": "ai-agent-conv-14",
+      "name": "🤖 AI Agent (Conversation)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1740,
+        760
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 600
+        }
+      },
+      "id": "openai-conv-15",
+      "name": "OpenAI Conversation",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.1,
+      "position": [
+        1740,
+        920
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-cred",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Parse WhatsApp Message').item.json.phone }}",
+        "contextWindowLength": 6
+      },
+      "id": "memory-conv-16",
+      "name": "Conversation Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [
+        1900,
+        920
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/YOUR_PHONE_NUMBER_ID/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_WHATSAPP_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Parse WhatsApp Message').item.json.phone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": \"{{ $json.output.replace(/\"/g, '\\\\\"') }}\" }\n}",
+        "options": {}
+      },
+      "id": "wa-send-reply-17",
+      "name": "📤 WhatsApp Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2000,
+        760
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Progress",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ new Date().toISOString() }}",
+            "Phone": "={{ $('Parse WhatsApp Message').item.json.phone }}",
+            "UserName": "={{ $('Parse WhatsApp Message').item.json.userName }}",
+            "Day": "={{ $('Merge Progress + Dialogue').item.json.dayNumber }}",
+            "Stage": "={{ $('Merge Progress + Dialogue').item.json.dialogue.stage }}",
+            "UserMessage": "={{ $('Parse WhatsApp Message').item.json.userMessage }}",
+            "AIResponse": "={{ $('🤖 AI Agent (Conversation)').item.json.output }}"
+          }
+        }
+      },
+      "id": "sheets-log-18",
+      "name": "📊 Log to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2260,
+        760
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-cred",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "day-complete",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-complete-19",
+      "name": "✅ Day Complete Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        700,
+        1080
+      ],
+      "webhookId": "day-complete-auraloop"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst body = $input.item.json.body || $input.item.json;\nreturn {\n  phone: body.phone || body.userId,\n  userName: body.userName || 'Founder',\n  dayNumber: Math.min(21, Math.max(1, parseInt(body.dayNumber) || 1)),\n  mood: body.mood || '',\n  evidence: body.evidence || '',\n  timestamp: new Date().toISOString()\n};\n"
+      },
+      "id": "code-parse-completion-20",
+      "name": "Parse Completion Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        1080
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\":\"received\",\"day\":{{ $json.dayNumber }}}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "webhook-ack-complete-21",
+      "name": "Acknowledge Completion",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        1260
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Progress",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ new Date().toISOString() }}",
+            "Phone": "={{ $json.phone }}",
+            "UserName": "={{ $json.userName }}",
+            "Day": "={{ $json.dayNumber }}",
+            "Mood": "={{ $json.mood }}",
+            "Evidence": "={{ $json.evidence }}",
+            "Type": "completion"
+          }
+        }
+      },
+      "id": "sheets-update-22",
+      "name": "Update Progress Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1220,
+        1080
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "gsheets-cred",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.bannerbear.com/v2/images",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "synchronous",
+              "value": "true"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_BANNERBEAR_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"template\": \"YOUR_BANNERBEAR_TEMPLATE_UID\",\n  \"modifications\": [\n    { \"name\": \"user_name\", \"text\": \"{{ $('Parse Completion Data').item.json.userName }}\" },\n    { \"name\": \"day_number\", \"text\": \"Day {{ $('Parse Completion Data').item.json.dayNumber }}\" },\n    { \"name\": \"achievement_text\", \"text\": \"{{ $('Parse Completion Data').item.json.evidence || 'Day complete!' }}\" },\n    { \"name\": \"progress_percent\", \"text\": \"{{ Math.round(($('Parse Completion Data').item.json.dayNumber / 21) * 100) }}%\" }\n  ]\n}",
+        "options": {}
+      },
+      "id": "bannerbear-gen-23",
+      "name": "🎨 Generate Progress Card",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1480,
+        1080
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/YOUR_PHONE_NUMBER_ID/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_WHATSAPP_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Parse Completion Data').item.json.phone }}\",\n  \"type\": \"image\",\n  \"image\": {\n    \"link\": \"{{ $json.image_url || $json.url }}\",\n    \"caption\": \"🎉 *Day {{ $('Parse Completion Data').item.json.dayNumber }} Complete, {{ $('Parse Completion Data').item.json.userName }}!*\\n\\nYou're building the identity of an AI founder — one day at a time.\\n\\n{{ Math.round(($('Parse Completion Data').item.json.dayNumber / 21) * 100) }}% of your 21-day journey done. Keep going!\"\n  }\n}",
+        "options": {}
+      },
+      "id": "wa-send-card-24",
+      "name": "📤 WhatsApp Progress Card",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1740,
+        1080
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 21 * * *"
+            }
+          ]
+        }
+      },
+      "id": "sched-evening-25",
+      "name": "🌙 Evening (9pm)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        700,
+        1380
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ⚙️ CONFIGURE\nconst WHATSAPP_PHONE = 'YOUR_PHONE_NUMBER'; // e.g. '919876543210'\nconst JOURNEY_START_DATE = '2024-06-18';\n\nconst start = new Date(JOURNEY_START_DATE);\nconst today = new Date();\nconst dayNumber = Math.min(21, Math.max(1, Math.floor((today - start) / (1000 * 60 * 60 * 24)) + 1));\n\nconst message = `🌙 *AuraLoop — Day ${dayNumber} Evening*\n\nTwo minutes. That's all.\n\nReflect on today:\n\n1️⃣ *What did I create or attempt today?*\n\n2️⃣ *What evidence shows I'm becoming an AI founder?*\n\n3️⃣ *What's one small step for tomorrow?*\n\nReply with your reflection — or just rate your day 1-10.\n\n✨ _You don't need a perfect day. You need a consistent one._`;\n\nreturn { phone: WHATSAPP_PHONE, message, dayNumber };"
+      },
+      "id": "code-evening-26",
+      "name": "Evening Reflection",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        1380
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/YOUR_PHONE_NUMBER_ID/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_WHATSAPP_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.phone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": \"{{ $json.message }}\" }\n}",
+        "options": {}
+      },
+      "id": "wa-send-evening-27",
+      "name": "📤 WhatsApp Evening Send",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1220,
+        1380
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "affirmation-api",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-api-28",
+      "name": "🔗 REST API",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        700,
+        1580
+      ],
+      "webhookId": "affirmation-api-auraloop"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body || $input.item.json;\n\nconst DIALOGUES = [\n  { day: 1, doubt: \"I'm not an entrepreneur.\", response: \"Every entrepreneur starts as someone with an idea. You don't need a business background to begin.\", truth: \"I am becoming the person who builds successful businesses through AI.\", stage: \"Identity\", action: \"Write down one thing you know deeply that others struggle with.\" },\n  { day: 2, doubt: \"Others are already ahead of me.\", response: \"Their progress does not reduce your opportunity.\", truth: \"I focus on my path, my experience, and my unique perspective.\", stage: \"Identity\", action: \"List 3 problems you've personally experienced that AI could help solve.\" },\n  { day: 3, doubt: \"I don't know enough about AI.\", response: \"Building is how you learn.\", truth: \"Every hour I spend building increases my capabilities.\", stage: \"Identity\", action: \"Spend 30 minutes exploring one AI tool you've been curious about.\" },\n  { day: 4, doubt: \"What if my idea isn't good enough?\", response: \"Ideas become valuable through testing.\", truth: \"I am allowed to start with an imperfect idea.\", stage: \"Identity\", action: \"Write your idea in one sentence without judging it.\" },\n  { day: 5, doubt: \"What if nobody uses my product?\", response: \"Your goal is to help a few people first.\", truth: \"Small groups of satisfied users create great businesses.\", stage: \"Identity\", action: \"Name 5 specific people who might need what you're building.\" },\n  { day: 6, doubt: \"I don't know what problem to solve.\", response: \"Problems reveal themselves when you listen.\", truth: \"Curiosity guides me toward opportunities.\", stage: \"Clarity\", action: \"Have one conversation about someone's work frustrations.\" },\n  { day: 7, doubt: \"I don't have enough time.\", response: \"Consistent focused effort creates momentum.\", truth: \"Thirty focused minutes each day moves me forward.\", stage: \"Clarity\", action: \"Block 30 minutes tomorrow for your project.\" },\n  { day: 8, doubt: \"I might never finish this.\", response: \"You only need to complete the next step.\", truth: \"Progress happens one decision at a time.\", stage: \"Clarity\", action: \"Define just the next single action.\" },\n  { day: 9, doubt: \"What if I lose motivation?\", response: \"Systems matter more than motivation.\", truth: \"Consistency creates results.\", stage: \"Clarity\", action: \"Set a recurring 15-minute daily calendar block.\" },\n  { day: 10, doubt: \"What if people judge my early work?\", response: \"Feedback improves products faster than perfectionism.\", truth: \"Sharing my work accelerates my growth.\", stage: \"Clarity\", action: \"Share one small insight with someone today.\" },\n  { day: 11, doubt: \"I don't know how to build everything.\", response: \"You can learn, collaborate, and use tools.\", truth: \"Resourcefulness is more important than knowing everything.\", stage: \"Creation\", action: \"Identify one tool or person that fills a skill gap.\" },\n  { day: 12, doubt: \"I don't understand business or marketing.\", response: \"Marketing is helping people discover value.\", truth: \"I can learn both skills step by step.\", stage: \"Creation\", action: \"Write one sentence describing your ideal user.\" },\n  { day: 13, doubt: \"What if I fail publicly?\", response: \"Building in public is evidence of courage.\", truth: \"Each experiment moves me closer to success.\", stage: \"Creation\", action: \"Post one honest sentence about what you're building.\" },\n  { day: 14, doubt: \"What if I make mistakes?\", response: \"Mistakes are data, not judgments.\", truth: \"I improve through iteration.\", stage: \"Creation\", action: \"Review something you built and note one improvement.\" },\n  { day: 15, doubt: \"There are smarter people than me.\", response: \"Success belongs to those who stay consistent.\", truth: \"Persistence creates an advantage.\", stage: \"Creation\", action: \"Document one thing you've learned this week.\" },\n  { day: 16, doubt: \"What if my product isn't unique?\", response: \"Your experience and execution make it unique.\", truth: \"I bring value that no one else can replicate exactly.\", stage: \"Launch & Growth\", action: \"List 3 things about your approach that are distinctly yours.\" },\n  { day: 17, doubt: \"What if I don't find users?\", response: \"Users exist wherever problems exist.\", truth: \"The right users are already searching for solutions.\", stage: \"Launch & Growth\", action: \"Identify 2 communities where your potential users gather.\" },\n  { day: 18, doubt: \"What if nobody pays for it?\", response: \"People pay for solutions that save time or reduce frustration.\", truth: \"Valuable solutions attract income.\", stage: \"Launch & Growth\", action: \"Find 3 similar products people already pay for.\" },\n  { day: 19, doubt: \"Building a business feels overwhelming.\", response: \"Businesses are built one feature and one user at a time.\", truth: \"I focus only on today's next step.\", stage: \"Launch & Growth\", action: \"Break your current goal into the smallest possible next step.\" },\n  { day: 20, doubt: \"What if this never replaces my job income?\", response: \"You are building additional income streams steadily.\", truth: \"Small wins compound into meaningful financial freedom.\", stage: \"Launch & Growth\", action: \"Define what meaningful progress looks like for you in 90 days.\" },\n  { day: 21, doubt: \"Am I truly capable of building a successful AI business?\", response: \"You have curiosity, expertise, and the courage to begin.\", truth: \"I am becoming the person who launches meaningful AI products, creates impact, and builds long-term freedom.\", stage: \"Launch & Growth\", action: \"Write a letter to yourself describing who you've become.\" }\n];\n\nconst dayNumber = Math.min(21, Math.max(1, parseInt(body.dayNumber) || 1));\nreturn {\n  userName: body.userName || 'Founder',\n  userMessage: body.message || body.doubt || '',\n  dayNumber,\n  sessionType: body.sessionType || 'query',\n  dialogue: DIALOGUES[dayNumber - 1]\n};"
+      },
+      "id": "code-parse-api-29",
+      "name": "Parse API Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        1580
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "User: {{ $json.userName }}\nDay {{ $json.dayNumber }} of 21 | Stage: {{ $json.dialogue.stage }}\nMessage: \"{{ $json.userMessage }}\"\n\nDay Dialogue:\nDoubt: {{ $json.dialogue.doubt }}\nResponse: {{ $json.dialogue.response }}\nTruth: {{ $json.dialogue.truth }}\nAction: {{ $json.dialogue.action }}\n\nGenerate a personalised affirmation response.",
+        "options": {
+          "systemMessage": "You are AuraLoop — a warm, evidence-based mindset coach guiding an AI founder through a 21-day journey from self-doubt to confident action.\n\nTHE JOURNEY:\n- Days 1–5: IDENTITY — Who am I becoming?\n- Days 6–10: CLARITY — What problem am I solving?\n- Days 11–15: CREATION — I am building and sharing\n- Days 16–21: LAUNCH & GROWTH — Creating value and attracting users\n\nCORE IDENTITY STATEMENT: \"I am becoming the person who builds successful businesses through AI.\"\n\nYOUR STYLE:\n- Warm, direct, and grounded — like a trusted senior colleague\n- Honour the doubt first. Never dismiss it.\n- Reframe with evidence and logic, not empty positivity\n- Always end with ONE specific micro-action (< 30 mins)\n- For WhatsApp/Telegram: use *bold* sparingly, keep messages under 300 words\n- Structure: Acknowledge → Reframe → Truth → Action\n\nFOR MORNING DELIVERY:\nPresent the day's dialogue as an inspiring, grounded morning message. Include the doubt, the reframe, and today's truth.\n\nFOR CONVERSATIONAL DOUBTS:\nWhen a user shares a specific doubt, acknowledge it personally, connect it to the day's dialogue, and personalise the reframe to their exact words.\n\nFOR EVENING REFLECTION:\nAsk: What did you create today? What evidence shows you're becoming a builder?\n\nALWAYS END WITH:\n✨ Today's Truth: [truth statement]\n🎯 Today's Action: [specific micro-action]"
+        }
+      },
+      "id": "ai-agent-api-30",
+      "name": "🤖 AI Agent (API)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1220,
+        1580
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 600
+        }
+      },
+      "id": "openai-api-31",
+      "name": "OpenAI API Path",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.1,
+      "position": [
+        1220,
+        1740
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-cred",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"day\": {{ $('Parse API Request').item.json.dayNumber }},\n  \"stage\": \"{{ $('Parse API Request').item.json.dialogue.stage }}\",\n  \"dialogue\": {\n    \"doubt\": \"{{ $('Parse API Request').item.json.dialogue.doubt }}\",\n    \"response\": \"{{ $('Parse API Request').item.json.dialogue.response }}\",\n    \"truth\": \"{{ $('Parse API Request').item.json.dialogue.truth }}\",\n    \"action\": \"{{ $('Parse API Request').item.json.dialogue.action }}\"\n  },\n  \"aiResponse\": \"{{ $json.output }}\"\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-webhook-32",
+      "name": "📤 API Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1480,
+        1580
+      ]
+    }
+  ],
+  "connections": {
+    "⏰ Morning (7am)": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Morning Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Morning Config": {
+      "main": [
+        [
+          {
+            "node": "Get Day Dialogue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Day Dialogue": {
+      "main": [
+        [
+          {
+            "node": "🤖 AI Agent (Morning)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 AI Agent (Morning)": {
+      "main": [
+        [
+          {
+            "node": "📤 WhatsApp Morning Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Morning": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "🤖 AI Agent (Morning)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 WhatsApp Incoming": {
+      "main": [
+        [
+          {
+            "node": "Parse WhatsApp Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Acknowledge WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse WhatsApp Message": {
+      "main": [
+        [
+          {
+            "node": "Get User Progress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get User Progress": {
+      "main": [
+        [
+          {
+            "node": "Merge Progress + Dialogue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Progress + Dialogue": {
+      "main": [
+        [
+          {
+            "node": "🤖 AI Agent (Conversation)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 AI Agent (Conversation)": {
+      "main": [
+        [
+          {
+            "node": "📤 WhatsApp Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 WhatsApp Reply": {
+      "main": [
+        [
+          {
+            "node": "📊 Log to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Conversation": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "🤖 AI Agent (Conversation)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversation Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "🤖 AI Agent (Conversation)",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✅ Day Complete Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Completion Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Acknowledge Completion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Completion Data": {
+      "main": [
+        [
+          {
+            "node": "Update Progress Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Progress Sheet": {
+      "main": [
+        [
+          {
+            "node": "🎨 Generate Progress Card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🎨 Generate Progress Card": {
+      "main": [
+        [
+          {
+            "node": "📤 WhatsApp Progress Card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🌙 Evening (9pm)": {
+      "main": [
+        [
+          {
+            "node": "Evening Reflection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evening Reflection": {
+      "main": [
+        [
+          {
+            "node": "📤 WhatsApp Evening Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔗 REST API": {
+      "main": [
+        [
+          {
+            "node": "Parse API Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse API Request": {
+      "main": [
+        [
+          {
+            "node": "🤖 AI Agent (API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 AI Agent (API)": {
+      "main": [
+        [
+          {
+            "node": "📤 API Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI API Path": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "🤖 AI Agent (API)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "auraloop-21day-affirmation-agent",
+  "tags": [
+    {
+      "id": "tag-affirmation",
+      "name": "affirmation"
+    },
+    {
+      "id": "tag-mindset",
+      "name": "mindset"
+    },
+    {
+      "id": "tag-auraloop",
+      "name": "auraloop"
+    },
+    {
+      "id": "tag-whatsapp",
+      "name": "whatsapp"
+    }
+  ]
+}

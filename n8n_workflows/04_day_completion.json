@@ -1,0 +1,140 @@
+{
+  "name": "04 Day Completion + Progress Card",
+  "nodes": [
+    {
+      "id": "webhook-day-complete",
+      "name": "Webhook: Day Complete",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [100, 300],
+      "parameters": {
+        "path": "day-complete",
+        "httpMethod": "POST",
+        "authentication": "headerAuth",
+        "options": {}
+      }
+    },
+    {
+      "id": "validate-secret-day",
+      "name": "Validate Secret",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [300, 300],
+      "parameters": {
+        "conditions": {
+          "conditions": [{ "id": "check", "leftValue": "={{ $json.headers['x-webhook-secret'] }}", "rightValue": "={{ $env.WEBHOOK_SECRET }}", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "get-user-for-completion",
+      "name": "Get User + Journey Data",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [500, 200],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT u.name, u.whatsapp_number, u.whatsapp_opted_in, j.current_affirmation_day, j.current_calendar_day, j.transformation_score, j.track FROM users u JOIN journeys j ON j.user_id = u.id WHERE j.id = '{{ $json.body.journey_id }}'"
+      }
+    },
+    {
+      "id": "generate-progress-card",
+      "name": "Generate Progress Card (Bannerbear)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.bannerbear.com/v2/images",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{ $env.BANNERBEAR_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "mode": "raw",
+          "rawBody": "={{ JSON.stringify({ template: 'progress_card_template_uid', modifications: [ { name: 'user_name', text: $json.name }, { name: 'day_number', text: 'Day ' + $('Webhook: Day Complete').item.json.body.day_number + ' Complete' }, { name: 'transformation_score', text: Math.round($json.transformation_score) + '/100' }, { name: 'calendar_vs_affirmation', text: $json.current_calendar_day + ' calendar · ' + $json.current_affirmation_day + ' affirmation' } ], webhook_url: $env.BACKEND_URL + '/api/webhooks/progress-card-ready', metadata: JSON.stringify({ journey_id: $('Webhook: Day Complete').item.json.body.journey_id, day_number: $('Webhook: Day Complete').item.json.body.day_number }) }) }}"
+        }
+      }
+    },
+    {
+      "id": "check-milestone",
+      "name": "Is Milestone Day?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [700, 420],
+      "parameters": {
+        "conditions": {
+          "conditions": [{ "id": "milestone-check", "leftValue": "={{ [1,7,14,21].includes($('Webhook: Day Complete').item.json.body.day_number) }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "send-milestone-whatsapp",
+      "name": "Send Milestone WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 380],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.WHATSAPP_API_URL }}/api/v1/sendTemplateMessage",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "mode": "raw",
+          "rawBody": "={{ JSON.stringify({ phone_number: $('get-user-for-completion').item.json.whatsapp_number, template_name: 'milestone_' + $('Webhook: Day Complete').item.json.body.day_number, broadcast_name: 'milestone', parameters: [ { name: 'user_name', value: $('get-user-for-completion').item.json.name }, { name: 'score_before', value: String($('Webhook: Day Complete').item.json.body.score_before || '—') }, { name: 'score_now', value: String(Math.round($('get-user-for-completion').item.json.transformation_score)) } ] }) }}"
+        }
+      }
+    },
+    {
+      "id": "send-regular-congrats",
+      "name": "Send Regular Day Congrats",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 560],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.WHATSAPP_API_URL }}/api/v1/sendTemplateMessage",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "mode": "raw",
+          "rawBody": "={{ JSON.stringify({ phone_number: $('get-user-for-completion').item.json.whatsapp_number, template_name: 'day_complete', broadcast_name: 'day_complete', parameters: [ { name: 'day_number', value: String($('Webhook: Day Complete').item.json.body.day_number) }, { name: 'score', value: String(Math.round($('get-user-for-completion').item.json.transformation_score)) } ] }) }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook: Day Complete": { "main": [[{ "node": "Validate Secret", "type": "main", "index": 0 }]] },
+    "Validate Secret": {
+      "main": [
+        [{ "node": "Get User + Journey Data", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Get User + Journey Data": {
+      "main": [[
+        { "node": "Generate Progress Card (Bannerbear)", "type": "main", "index": 0 },
+        { "node": "Is Milestone Day?", "type": "main", "index": 0 }
+      ]]
+    },
+    "Is Milestone Day?": {
+      "main": [
+        [{ "node": "Send Milestone WhatsApp", "type": "main", "index": 0 }],
+        [{ "node": "Send Regular Day Congrats", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" }
+}
