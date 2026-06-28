@@ -1,0 +1,22 @@
+# Node modules
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Docker volumes (not tracked)
+certs/
+
+# OS
+.DS_Store
+Thumbs.db
